@@ -1,0 +1,18 @@
+
+# Python temporary files
+__pycache__/
+*.pyc
+.venv/
+
+# Downloaded MNIST dataset
+data/
+
+# Experiment outputs
+results/
+
+# Trained model weights
+*.pth
+
+# Editor and system files
+.vscode/
+.DS_Store
