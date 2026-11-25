@@ -1,5 +1,6 @@
 
 import argparse
+import time
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -43,6 +44,15 @@ def main():
     total_originally_correct = 0
     total_successful_attacks = 0
 
+    total_adversarial_correct = 0
+    total_l2 = 0.0
+    total_linf = 0.0
+
+    print(f"Using device: {device}")
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+    start_time = time.perf_counter()
+
     for images, labels in test_loader:
         images = images.to(device)
         labels = labels.to(device)
@@ -72,6 +82,19 @@ def main():
         total_originally_correct += originally_correct.sum().item()
         total_successful_attacks += successful_attacks.sum().item()
 
+        total_adversarial_correct += (adversarial_predictions == labels).sum().item()
+
+        # Measure perturbations for successful attacks only
+        differences = (adversarial_images - images).flatten(1)
+        l2 = differences.norm(p=2, dim=1)
+        linf = differences.abs().max(dim=1).values
+        total_l2 += l2[successful_attacks].sum().item()
+        total_linf += linf[successful_attacks].sum().item()
+
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+    elapsed_time = time.perf_counter() - start_time
+
     original_accuracy = 100 * total_originally_correct / len(test_data)
     attack_success_rate = (
         100 * total_successful_attacks / total_originally_correct
@@ -82,6 +105,11 @@ def main():
     print(f"Epsilon: {epsilon}")
     print(f"Successful attacks: {total_successful_attacks}")
     print(f"Attack success rate: {attack_success_rate:.2f}%")
+    print(f"Accuracy after attack: {100 * total_adversarial_correct / len(test_data):.2f}%")
+    if total_successful_attacks > 0:
+        print(f"Average L2 distance: {total_l2 / total_successful_attacks:.4f}")
+        print(f"Average Linf distance: {total_linf / total_successful_attacks:.4f}")
+    print(f"Execution time: {elapsed_time:.4f} seconds")
 
 
 if __name__ == "__main__":
