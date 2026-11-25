@@ -5,7 +5,7 @@ import torch
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from models.mnist_cnn import MNISTModel
-from attacks.cw import cw_attack
+from attacks.cw import cw_attack, cw_binary_search
 
 
 def main():
@@ -14,7 +14,10 @@ def main():
     parser.add_argument("--steps", type=int, default=1000)
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--c", type=float, default=1.0)
+    parser.add_argument("--search-steps", type=int, default=0)
     args = parser.parse_args()
+    if args.search_steps < 0:
+        parser.error("Search steps cannot be negative.")
 
     if min(args.samples, args.steps, args.batch_size) <= 0 or args.c <= 0:
         parser.error("Samples, steps, batch size and c must be positive.")
@@ -62,10 +65,16 @@ def main():
             continue
 
         target_labels = (labels + 1) % 10
-        adversarial_images, successful = cw_attack(
-            model, images, target_labels,
-            c=args.c, steps=args.steps, learning_rate=0.01
-        )
+        if args.search_steps > 0:
+            adversarial_images, successful = cw_binary_search(
+                model, images, target_labels, c=args.c,
+                steps=args.steps, search_steps=args.search_steps
+            )
+        else:
+            adversarial_images, successful = cw_attack(
+                model, images, target_labels,
+                c=args.c, steps=args.steps, learning_rate=0.01
+            )
 
         distances = torch.sqrt(
             ((adversarial_images - images) ** 2).flatten(1).sum(dim=1)
@@ -92,7 +101,8 @@ def main():
 
     print("\nFinal Results")
     print(f"Images tested: {total_tested}")
-    print(f"C: {args.c}")
+    print(f"Initial C: {args.c}")
+    print(f"Search rounds: {args.search_steps}")
     print(f"Steps: {args.steps}")
     print(f"Batch size: {args.batch_size}")
     print(f"Successful attacks: {total_successful}")
