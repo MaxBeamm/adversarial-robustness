@@ -6,9 +6,9 @@ This project partially reproduces the Carlini & Wagner L2 attack on a convolutio
 
 Python 3.13 is recommended. The experiments were run on Windows with an NVIDIA RTX 5070 Ti.
 
+Extract the submitted ZIP file and open PowerShell inside the extracted project folder.
+
 ```powershell
-git clone https://github.com/MaxBeamm/adversarial-robustness.git
-cd adversarial-robustness
 py -3.13 -m venv .venv
 ```
 
@@ -38,7 +38,7 @@ On Linux/macOS, use python3.13 to create the environment and .venv/bin/python in
 .\.venv\Scripts\python.exe train.py
 ```
 
-MNIST is downloaded automatically. Training runs for three epochs and saves weights to models/mnist_model.pth. Train once before running the evaluations. Training is not seeded, so exact results can vary.
+MNIST is downloaded automatically. Training runs for three epochs and saves weights to models/mnist_model.pth. If models/mnist_model.pth is included in the submission, skip training to use the original experimental weights. Otherwise, train once before running the evaluations. Training is not seeded, so exact results can vary.
 
 ## Run experiments
 
