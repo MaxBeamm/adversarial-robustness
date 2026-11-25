@@ -79,3 +79,34 @@ def cw_attack(model, images, target_labels, c=1.0,
             successful[better] = True
 
     return best_images, successful
+
+
+def cw_binary_search(model, images, target_labels, c=1.0,
+                     steps=1000, search_steps=9, learning_rate=0.01):
+    # Keep separate bounds and best results for each image
+    lower = torch.zeros(len(images), device=images.device)
+    upper = torch.full_like(lower, float("inf"))
+    current_c = torch.full_like(lower, c)
+    best_images = images.clone().detach()
+    best_distances = torch.full_like(lower, float("inf"))
+    successful = torch.zeros_like(lower, dtype=torch.bool)
+
+    for round_index in range(search_steps):
+        candidates, found = cw_attack(
+            model, images, target_labels, c=current_c,
+            steps=steps, learning_rate=learning_rate
+        )
+        distances = ((candidates - images) ** 2).flatten(1).sum(dim=1)
+        better = found & (distances < best_distances)
+        best_images[better] = candidates[better]
+        best_distances[better] = distances[better]
+        successful |= found
+
+        # Successful attacks allow us to try a smaller c
+        upper = torch.where(found, torch.minimum(upper, current_c), upper)
+        lower = torch.where(found, lower, torch.maximum(lower, current_c))
+        current_c = torch.where(
+            torch.isfinite(upper), (lower + upper) / 2, current_c * 10
+        )
+
+    return best_images, successful
